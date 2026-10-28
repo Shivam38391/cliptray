@@ -127,7 +127,43 @@ clipboard-manager/
 
 ---
 
-## Getting Started
+## Installation (macOS)
+
+### 1. Download & Install
+1. Download the latest `Cliptray_x.x.x_aarch64.dmg` from the **[Releases](../../releases)** page.
+2. Open the `.dmg` file and drag **Cliptray** into your **Applications** folder.
+
+### 2. First-Time Launch (Bypassing macOS Gatekeeper)
+Because Cliptray is an independent, free, and open-source project without a paid Apple Developer certificate, macOS Gatekeeper may show a warning:  
+> *"Cliptray is damaged and can't be opened. You should eject the disk image."*
+
+To open it, use either of the following methods:
+
+#### Method A: Terminal (Instant 1-Liner)
+Open **Terminal** and run:
+```bash
+xattr -cr /Applications/Cliptray.app
+```
+Then launch **Cliptray** from Applications or Spotlight.
+
+#### Method B: Settings GUI (No Terminal)
+1. Try to open **Cliptray** from Applications (click **Done** / **Cancel** on the alert).
+2. Go to **System Settings → Privacy & Security**.
+3. Scroll down to the **Security** section where you'll see:  
+   *"Cliptray was blocked from use because it is not from an identified developer."*
+4. Click **Open Anyway** and enter your Mac password / Touch ID.
+
+---
+
+### 3. Grant Accessibility Permission (Required for Auto-Paste)
+Cliptray synthesizes a native keystroke (`⌘V`) when you select a clip to paste it directly into your active app (VS Code, Chrome, Slack, etc.).
+
+When prompted on first use, enable Cliptray in:  
+**System Settings → Privacy & Security → Accessibility → Cliptray (ON)**.
+
+---
+
+## Development & Building from Source
 
 ### Prerequisites
 
