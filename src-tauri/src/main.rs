@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use tauri::Emitter;
+
 mod clipboard;
 mod input;
 mod position;
@@ -7,13 +9,12 @@ mod storage;
 mod tray;
 
 use clipboard::ClipboardManager;
-use position::toggle_window_at_tray;
 use storage::{ClipboardItem, Storage};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use tauri::{AppHandle, Manager, State, WebviewWindow, WindowEvent};
+use tauri::{AppHandle, Manager, State, WindowEvent};
 
 pub struct AppState {
     pub storage: Storage,
@@ -58,9 +59,13 @@ fn paste_item(app: AppHandle, state: State<'_, AppState>, content: String) -> Re
         window.hide().map_err(|e| e.to_string())?;
     }
 
-    // 3. Brief delay to allow OS window manager to return focus to target application
+    // 3. Delay to allow OS window manager (especially on Linux X11) to return focus to target application
     thread::spawn(move || {
+        #[cfg(target_os = "macos")]
         thread::sleep(Duration::from_millis(70));
+        #[cfg(not(target_os = "macos"))]
+        thread::sleep(Duration::from_millis(180));
+
         if let Err(err) = input::simulate_paste_keystroke() {
             eprintln!("[Cliptray] Keystroke simulation error: {}", err);
         }
@@ -113,6 +118,11 @@ fn main() {
                     let _ = apply_acrylic(&window, Some((20, 20, 20, 140)));
                 }
 
+                // Center, show, and focus window on startup
+                let _ = window.center();
+                let _ = window.show();
+                let _ = window.set_focus();
+
                 // Hide on blur (focus lost) listener
                 let win_clone = window.clone();
                 window.on_window_event(move |event| {
@@ -122,6 +132,57 @@ fn main() {
                         }
                     }
                 });
+            }
+
+            // Register global shortcut (Super+V / Windows+V)
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_global_shortcut::{Builder, GlobalShortcutExt, Shortcut, ShortcutState};
+
+                #[cfg(target_os = "macos")]
+                let shortcut_str = "Command+Shift+V";
+
+                #[cfg(target_os = "linux")]
+                let shortcut_str = "Super+V";
+
+                #[cfg(target_os = "windows")]
+                let shortcut_str = "Super+V";
+
+                let shortcut = shortcut_str.parse::<Shortcut>().map_err(|e| Box::<dyn std::error::Error>::from(e.to_string()))?;
+
+                app.handle().plugin(
+                    Builder::new()
+                        .with_handler(move |app_handle, sc, event| {
+                            if sc == &shortcut && event.state() == ShortcutState::Pressed {
+                                if let Some(window) = app_handle.get_webview_window("main") {
+                                    if window.is_visible().unwrap_or(false) {
+                                        let _ = window.set_always_on_top(false);
+                                        let _ = window.hide();
+                                    } else {
+                                        let _ = window.center();
+                                        let _ = window.show();
+                                        let _ = window.unminimize();
+                                        let _ = window.set_always_on_top(true);
+                                        let _ = window.set_focus();
+                                        let _ = window.emit("window-opened", ());
+
+                                        #[cfg(target_os = "linux")]
+                                        {
+                                            std::thread::spawn(|| {
+                                                std::thread::sleep(std::time::Duration::from_millis(50));
+                                                let _ = std::process::Command::new("xdotool")
+                                                    .args(["search", "--onlyvisible", "--name", "Cliptray", "windowraise", "windowactivate"])
+                                                    .status();
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                        .build(),
+                )?;
+
+                app.global_shortcut().register(shortcut).map_err(|e| Box::<dyn std::error::Error>::from(e.to_string()))?;
             }
 
             // Manage global application state

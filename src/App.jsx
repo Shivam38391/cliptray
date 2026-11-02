@@ -94,7 +94,8 @@ export default function App() {
   useEffect(() => {
     refreshHistory();
 
-    let unlisten = null;
+    let unlistenClipboard = null;
+    let unlistenWindow = null;
     if (isTauri) {
       listen('clipboard-updated', (event) => {
         const newItem = event.payload;
@@ -104,14 +105,35 @@ export default function App() {
           return [newItem, ...filtered];
         });
       }).then((fn) => {
-        unlisten = fn;
+        unlistenClipboard = fn;
+      });
+
+      listen('window-opened', () => {
+        setSelectedIndex(0);
+        window.focus();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }).then((fn) => {
+        unlistenWindow = fn;
       });
     }
 
     return () => {
-      if (unlisten) unlisten();
+      if (unlistenClipboard) unlistenClipboard();
+      if (unlistenWindow) unlistenWindow();
     };
   }, [refreshHistory]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   // Filter items based on active tab and search query
   const filteredItems = useMemo(() => {
@@ -286,19 +308,21 @@ export default function App() {
         return;
       }
 
-      // 7. Quick selection with Cmd+1 to Cmd+9
-      if ((e.metaKey || e.ctrlKey) && /^[1-9]$/.test(e.key)) {
-        const targetIndex = parseInt(e.key, 10) - 1;
-        if (targetIndex < filteredItems.length) {
-          e.preventDefault();
+      // 7. Quick selection with Cmd+1..9 / Ctrl+1..9 / Alt+1..9
+      const digitMatch = e.code?.match(/^Digit([1-9])$/) || e.key?.match(/^([1-9])$/);
+      if ((e.metaKey || e.ctrlKey || e.altKey) && digitMatch) {
+        e.preventDefault();
+        e.stopPropagation();
+        const targetIndex = parseInt(digitMatch[1], 10) - 1;
+        if (targetIndex >= 0 && targetIndex < filteredItems.length) {
           handleSelectAndPaste(filteredItems[targetIndex]);
         }
         return;
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [
     filteredItems,
     selectedIndex,
