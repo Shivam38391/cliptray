@@ -75,7 +75,7 @@ export default function ClipboardItem({
                   : 'bg-neutral-200/70 dark:bg-neutral-800/70 text-neutral-400 dark:text-neutral-500'
               }`}
             >
-              ⌘{index + 1}
+              {typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl+'}{index + 1}
             </span>
           )}
 

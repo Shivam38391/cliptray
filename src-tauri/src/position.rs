@@ -1,15 +1,29 @@
-use tauri::{LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize, Position, Rect, Size, WebviewWindow};
+use tauri::{Emitter, LogicalPosition, Position, Rect, Size, WebviewWindow};
 
 /// Toggle window visibility and position it precisely relative to the system tray icon
 pub fn toggle_window_at_tray(window: &WebviewWindow, tray_rect: Option<Rect>) -> Result<(), String> {
     if window.is_visible().unwrap_or(false) {
+        let _ = window.set_always_on_top(false);
         window.hide().map_err(|e| e.to_string())?;
         return Ok(());
     }
 
     position_window(window, tray_rect)?;
+    let _ = window.set_always_on_top(true);
     window.show().map_err(|e| e.to_string())?;
     window.set_focus().map_err(|e| e.to_string())?;
+    let _ = window.emit("window-opened", ());
+
+    #[cfg(target_os = "linux")]
+    {
+        std::thread::spawn(|| {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+            let _ = std::process::Command::new("xdotool")
+                .args(["search", "--onlyvisible", "--name", "Cliptray", "windowraise", "windowactivate"])
+                .status();
+        });
+    }
+
     Ok(())
 }
 
@@ -68,7 +82,7 @@ pub fn position_window(window: &WebviewWindow, tray_rect: Option<Rect>) -> Resul
         };
 
         let center_x = tray_x + (tray_w / 2.0);
-        let mut x = center_x - (win_w / 2.0);
+        let x = center_x - (win_w / 2.0);
 
         let y = if cfg!(target_os = "macos") {
             // macOS: Directly beneath the top menu bar icon with a clean 6px margin

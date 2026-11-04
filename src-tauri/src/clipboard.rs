@@ -7,12 +7,15 @@ use tauri::{AppHandle, Emitter};
 
 pub struct ClipboardManager {
     last_content: Arc<Mutex<String>>,
+    clipboard: Arc<Mutex<Option<Clipboard>>>,
 }
 
 impl ClipboardManager {
     pub fn new() -> Self {
+        let cb = Clipboard::new().ok();
         Self {
             last_content: Arc::new(Mutex::new(String::new())),
+            clipboard: Arc::new(Mutex::new(cb)),
         }
     }
 
@@ -21,8 +24,14 @@ impl ClipboardManager {
         let mut last = self.last_content.lock().map_err(|e| e.to_string())?;
         *last = text.to_string();
 
-        let mut clipboard = Clipboard::new().map_err(|e| e.to_string())?;
-        clipboard.set_text(text).map_err(|e| e.to_string())?;
+        let mut cb_guard = self.clipboard.lock().map_err(|e| e.to_string())?;
+        if let Some(ref mut cb) = *cb_guard {
+            cb.set_text(text).map_err(|e| e.to_string())?;
+        } else {
+            let mut cb = Clipboard::new().map_err(|e| e.to_string())?;
+            cb.set_text(text).map_err(|e| e.to_string())?;
+            *cb_guard = Some(cb);
+        }
         Ok(())
     }
 
