@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cliptray — Native Menu Bar Clipboard Manager for macOS, Windows & Linux</title>
+  <meta name="description" content="A blazing-fast, keyboard-first, native menu bar clipboard manager built with Rust and Tauri v2. 0% idle CPU, local SQLite privacy, and instant auto-paste.">
+  
+  <!-- Open Graph / Social Media Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Cliptray — Native Menu Bar Clipboard Manager">
+  <meta property="og:description" content="Blazing-fast, keyboard-first clipboard manager. 0% idle CPU, Apple HIG frosted glass design, 100% offline local privacy.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Cliptray — Native Menu Bar Clipboard Manager">
+  <meta name="twitter:description" content="Lightweight, open-source clipboard manager built in Rust & Tauri v2 for macOS, Windows & Linux.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='8' height='4' x='8' y='2' rx='1' ry='1'/><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><path d='M9 14h6'/><path d='M9 18h6'/></svg>">
+
+  <!-- Tailwind CSS & Inter Font -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0b0f17;
+      color: #f1f5f9;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+    .glow-blur {
+      background: radial-gradient(circle 400px at 50% 300px, rgba(59, 130, 246, 0.15), transparent 80%);
+    }
+    .glass-card {
+      background: rgba(22, 27, 34, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .popover-shadow {
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body class="min-h-screen relative overflow-x-hidden selection:bg-blue-500/30 selection:text-blue-200">
+
+  <!-- Ambient Glow -->
+  <div class="glow-blur absolute inset-0 pointer-events-none -z-10"></div>
+
+  <!-- Navigation -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-[#0b0f17]/80 border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/20">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+            <path d="M9 14h6"/>
+            <path d="M9 18h6"/>
+          </svg>
+        </div>
+        <span class="text-xl font-bold tracking-tight text-white">Cliptray</span>
+        <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">v0.1.0</span>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+        <a href="#features" class="hover:text-white transition-colors">Features</a>
+        <a href="#preview" class="hover:text-white transition-colors">Interactive Demo</a>
+        <a href="#shortcuts" class="hover:text-white transition-colors">Shortcuts</a>
+        <a href="#macos-install" class="hover:text-white transition-colors">Mac Guide</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/Shivam38391/cliptray" target="_blank" rel="noopener noreferrer" 
+           class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-200 bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          <span>Star on GitHub</span>
+        </a>
+        <a href="#downloads" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-500/25 transition-all">
+          Download
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="pt-20 pb-16 px-6 text-center max-w-4xl mx-auto">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 mb-8 animate-pulse">
+      <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+      <span>100% Free & Open Source • Built in Rust & Tauri v2</span>
+    </div>
+
+    <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6 leading-[1.15]">
+      Your Clipboard, <br>
+      <span class="bg-gradient-to-r from-blue-400 via-indigo-300 to-sky-400 bg-clip-text text-transparent">
+        Supercharged & Private.
+      </span>
+    </h1>
+
+    <p class="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+      A lightweight, native menu bar clipboard manager with Apple HIG frosted vibrancy. 
+      Zero background CPU drain, local SQLite encryption, and instant keystroke auto-paste.
+    </p>
+
+    <!-- Dynamic Smart Download CTA -->
+    <div id="downloads" class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+      <a id="primary-download-btn" 
+         href="https://github.com/Shivam38391/cliptray/releases/latest" 
+         class="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl text-base font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/30 ring-1 ring-white/20 transition-all transform hover:-translate-y-0.5">
+        <svg id="primary-btn-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <!-- Default Mac icon, dynamically switched by JS -->
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 1.01-2.87-.9.04-2 .6-2.65 1.34-.58.65-1.09 1.71-.95 2.74 1.01.08 1.97-.52 2.59-1.21z"/>
+        </svg>
+        <span id="primary-btn-text">Download for macOS (Universal DMG)</span>
+      </a>
+
+      <a href="https://github.com/Shivam38391/cliptray/releases/latest" 
+         class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
+        <span>All Releases & Platforms</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+        </svg>
+      </a>
+    </div>
+
+    <!-- Supported Platforms Pill Bar -->
+    <div class="flex items-center justify-center gap-6 text-xs text-slate-400">
+      <span class="inline-flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> macOS (Apple Silicon & Intel)
+      </span>
+      <span class="inline-flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-blue-400"></span> Windows 10/11
+      </span>
+      <span class="inline-flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-amber-400"></span> Linux (.deb & .AppImage)
+      </span>
+    </div>
+  </section>
+
+  <!-- Interactive Live Demo Section -->
+  <section id="preview" class="py-12 px-6 max-w-5xl mx-auto">
+    <div class="text-center mb-10">
+      <h2 class="text-xs uppercase tracking-widest text-blue-400 font-bold mb-2">Interactive Showcase</h2>
+      <p class="text-2xl sm:text-3xl font-bold text-white">Experience Cliptray Right in Your Browser</p>
+      <p class="text-sm text-slate-400 mt-2">Filter, search, and click items below to test the exact workflow.</p>
+    </div>
+
+    <div class="flex justify-center">
+      <!-- Simulated Cliptray Window Container -->
+      <div class="w-full max-w-sm rounded-2xl p-3.5 glass-card popover-shadow ring-1 ring-white/10">
+        <!-- Mock Menubar Tray Indicator -->
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-white/5 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping"></span>
+            <span class="font-semibold text-slate-200">Cliptray</span>
+          </div>
+          <span class="text-[11px] text-slate-400 font-mono" id="mock-count">4 items saved</span>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="relative mb-3">
+          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input id="demo-search" type="text" placeholder="Search clips... (⌘F)" 
+                 class="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+          <span class="text-[10px] font-mono text-slate-500 absolute right-3 top-2.5">ESC</span>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="flex gap-1.5 mb-3 overflow-x-auto pb-1 text-[11px] font-medium" id="filter-tabs">
+          <button class="filter-btn active px-2.5 py-1 rounded-lg bg-blue-600 text-white" data-filter="all">All</button>
+          <button class="filter-btn px-2.5 py-1 rounded-lg bg-white/5 text-slate-400 hover:text-white" data-filter="pinned">★ Pinned</button>
+          <button class="filter-btn px-2.5 py-1 rounded-lg bg-white/5 text-slate-400 hover:text-white" data-filter="link">Links</button>
+          <button class="filter-btn px-2.5 py-1 rounded-lg bg-white/5 text-slate-400 hover:text-white" data-filter="color">Colors</button>
+          <button class="filter-btn px-2.5 py-1 rounded-lg bg-white/5 text-slate-400 hover:text-white" data-filter="code">Code</button>
+        </div>
+
+        <!-- Clips List -->
+        <div class="space-y-2 max-h-[280px] overflow-y-auto pr-1" id="demo-clips">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Mock Toast -->
+        <div id="demo-toast" class="hidden mt-3 p-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs text-center font-mono">
+          ✓ Pasted: Command + V simulated!
+        </div>
+
+        <!-- Footer Shortcuts -->
+        <div class="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-500">
+          <span>↑↓ Navigate</span>
+          <span>↵ Auto-Paste</span>
+          <span>⌘P Pin</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- macOS Gatekeeper One-Time Guide -->
+  <section id="macos-install" class="py-12 px-6 max-w-4xl mx-auto">
+    <div class="rounded-2xl p-6 sm:p-8 border border-blue-500/20 bg-blue-950/20 backdrop-blur-sm">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex-shrink-0 flex items-center justify-center text-blue-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <h3 class="text-base font-bold text-white mb-1">First time installing on macOS?</h3>
+          <p class="text-sm text-slate-300 mb-4 leading-relaxed">
+            Cliptray is 100% free and open-source without an expensive Apple Developer subscription. 
+            If macOS displays <em>"Cliptray is damaged and can't be opened"</em>, run this single command once in your Terminal:
+          </p>
+          
+          <div class="flex flex-col sm:flex-row items-center gap-3">
+            <div class="w-full flex-1 flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-black/60 border border-white/10 font-mono text-xs text-blue-300">
+              <span id="cmd-text">xattr -cr /Applications/Cliptray.app</span>
+              <button onclick="copyCommand()" id="copy-btn" class="px-2.5 py-1 text-[11px] rounded bg-white/10 hover:bg-white/20 text-white font-sans transition-all">
+                Copy
+              </button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-2">
+            Alternatively, go to <strong>System Settings → Privacy & Security</strong> and click <strong>"Open Anyway"</strong>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Grid -->
+  <section id="features" class="py-16 px-6 max-w-6xl mx-auto">
+    <div class="text-center mb-16">
+      <h2 class="text-xs uppercase tracking-widest text-blue-400 font-bold mb-2">Engineered for Flow</h2>
+      <p class="text-3xl sm:text-4xl font-extrabold text-white">Why Developers Love Cliptray</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Feature 1 -->
+      <div class="p-6 rounded-2xl glass-card">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">0% Idle CPU & No Battery Drain</h3>
+        <p class="text-sm text-slate-400 leading-relaxed">
+          Engineered in Rust with lightweight 500ms smart polling. Leaves zero memory footprint and won't spin up your fans.
+        </p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="p-6 rounded-2xl glass-card">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">100% Offline & Private</h3>
+        <p class="text-sm text-slate-400 leading-relaxed">
+          Your clipboard history is saved locally in an SQLite database on your machine. Zero cloud telemetry, zero remote tracking.
+        </p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="p-6 rounded-2xl glass-card">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">Instant Auto-Paste (⌘V / Ctrl+V)</h3>
+        <p class="text-sm text-slate-400 leading-relaxed">
+          Select any clip and press Return. Cliptray automatically hands focus back and pastes directly into your active window.
+        </p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="p-6 rounded-2xl glass-card">
+        <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">Smart Format Detection</h3>
+        <p class="text-sm text-slate-400 leading-relaxed">
+          Automatically renders live color previews for Hex/RGB codes, clickable links, JSON syntax, and code snippets.
+        </p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="p-6 rounded-2xl glass-card">
+        <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">Pin Clips & Auto-Pruning</h3>
+        <p class="text-sm text-slate-400 leading-relaxed">
+          Pin passwords, commands, or reusable snippets forever. Non-pinned clips gracefully prune after 100 items to stay lean.
+        </p>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="p-6 rounded-2xl glass-card">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-4">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">True Native Menubar Popover</h3>
+        <p class="text-sm text-slate-400 leading-relaxed">
+          Seamlessly positioned right below your tray icon with Apple HIG HudWindow blur on macOS and Acrylic on Windows.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Keyboard Shortcuts Section -->
+  <section id="shortcuts" class="py-16 px-6 max-w-4xl mx-auto border-t border-white/5">
+    <div class="text-center mb-12">
+      <h2 class="text-xs uppercase tracking-widest text-blue-400 font-bold mb-2">Built For Speed</h2>
+      <p class="text-3xl font-extrabold text-white">Full Keyboard Navigation</p>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="p-4 rounded-xl glass-card text-center">
+        <kbd class="px-2 py-1 rounded bg-white/10 text-white font-mono text-xs border border-white/20">↑ / ↓</kbd>
+        <p class="text-xs text-slate-400 mt-2">Navigate clips</p>
+      </div>
+      <div class="p-4 rounded-xl glass-card text-center">
+        <kbd class="px-2 py-1 rounded bg-white/10 text-white font-mono text-xs border border-white/20">↵ Return</kbd>
+        <p class="text-xs text-slate-400 mt-2">Auto-paste clip</p>
+      </div>
+      <div class="p-4 rounded-xl glass-card text-center">
+        <kbd class="px-2 py-1 rounded bg-white/10 text-white font-mono text-xs border border-white/20">⌘1 – ⌘9</kbd>
+        <p class="text-xs text-slate-400 mt-2">Quick-paste top 9</p>
+      </div>
+      <div class="p-4 rounded-xl glass-card text-center">
+        <kbd class="px-2 py-1 rounded bg-white/10 text-white font-mono text-xs border border-white/20">⌘F</kbd>
+        <p class="text-xs text-slate-400 mt-2">Instant search</p>
+      </div>
+      <div class="p-4 rounded-xl glass-card text-center">
+        <kbd class="px-2 py-1 rounded bg-white/10 text-white font-mono text-xs border border-white/20">⌘P</kbd>
+        <p class="text-xs text-slate-400 mt-2">Pin / Star clip</p>
+      </div>
+      <div class="p-4 rounded-xl glass-card text-center">
+        <kbd class="px-2 py-1 rounded bg-white/10 text-white font-mono text-xs border border-white/20">⌫ Delete</kbd>
+        <p class="text-xs text-slate-400 mt-2">Delete clip</p>
+      </div>
+      <div class="p-4 rounded-xl glass-card text-center">
+        <kbd class="px-2 py-1 rounded bg-white/10 text-white font-mono text-xs border border-white/20">⌘⇧⌫</kbd>
+        <p class="text-xs text-slate-400 mt-2">Clear unpinned</p>
+      </div>
+      <div class="p-4 rounded-xl glass-card text-center">
+        <kbd class="px-2 py-1 rounded bg-white/10 text-white font-mono text-xs border border-white/20">Esc</kbd>
+        <p class="text-xs text-slate-400 mt-2">Dismiss window</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-12 px-6 border-t border-white/5 text-center text-xs text-slate-500">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-300">Cliptray</span>
+        <span>•</span>
+        <span>Open Source (MIT)</span>
+      </div>
+      <div class="flex items-center gap-4 text-slate-400">
+        <a href="https://github.com/Shivam38391/cliptray" class="hover:text-white transition-colors">GitHub</a>
+        <a href="https://github.com/Shivam38391/cliptray/releases" class="hover:text-white transition-colors">Releases</a>
+        <a href="https://github.com/Shivam38391/cliptray/issues" class="hover:text-white transition-colors">Report Issue</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Client-side Interactive Logic & OS Detection -->
+  <script>
+    // 1. Detect Visitor OS and customize Primary Download Button
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const primaryBtnText = document.getElementById('primary-btn-text');
+    const primaryBtn = document.getElementById('primary-download-btn');
+    const primaryIcon = document.getElementById('primary-btn-icon');
+
+    const GITHUB_RELEASES = 'https://github.com/Shivam38391/cliptray/releases/latest';
+
+    if (userAgent.indexOf('win') !== -1) {
+      primaryBtnText.textContent = 'Download for Windows (.exe / .msi)';
+      primaryIcon.innerHTML = `<path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.951-1.801"/>`;
+    } else if (userAgent.indexOf('linux') !== -1) {
+      primaryBtnText.textContent = 'Download for Linux (.deb / .AppImage)';
+      primaryIcon.innerHTML = `<path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.93V17a1 1 0 0 1-2 0v-.07A7.003 7.003 0 0 1 5.07 11H5a1 1 0 0 1 0-2h.07A7.003 7.003 0 0 1 11 3.07V3a1 1 0 0 1 2 0v.07A7.003 7.003 0 0 1 18.93 9H19a1 1 0 0 1 0 2h-.07A7.003 7.003 0 0 1 13 16.93z"/>`;
+    } else {
+      primaryBtnText.textContent = 'Download for macOS (Universal DMG)';
+    }
+
+    // 2. Interactive Popover Demo Data
+    const mockClips = [
+      { id: 1, text: 'https://github.com/Shivam38391/cliptray', type: 'link', pinned: true, label: 'Link' },
+      { id: 2, text: '#3B82F6', type: 'color', color: '#3B82F6', pinned: true, label: 'Color' },
+      { id: 3, text: 'git commit -m "feat: native clipboard tray"', type: 'code', pinned: false, label: 'Code' },
+      { id: 4, text: 'Clean frosted glass menu bar popover for macOS & Windows.', type: 'text', pinned: false, label: 'Text' }
+    ];
+
+    let currentFilter = 'all';
+    let searchQuery = '';
+
+    function renderClips() {
+      const container = document.getElementById('demo-clips');
+      container.innerHTML = '';
+
+      const filtered = mockClips.filter(c => {
+        const matchesFilter = currentFilter === 'all' || 
+          (currentFilter === 'pinned' && c.pinned) || 
+          c.type === currentFilter;
+        const matchesSearch = c.text.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesFilter && matchesSearch;
+      });
+
+      document.getElementById('mock-count').textContent = `${filtered.length} items saved`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-500">No matching clips found</div>`;
+        return;
+      }
+
+      filtered.forEach((clip, index) => {
+        const el = document.createElement('div');
+        el.className = `p-2.5 rounded-xl bg-white/[0.04] hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 cursor-pointer transition-all flex items-start gap-2.5 group`;
+        
+        let previewHtml = '';
+        if (clip.type === 'color') {
+          previewHtml = `<span class="w-4 h-4 rounded-md inline-block flex-shrink-0 shadow-sm border border-white/20 mt-0.5" style="background-color: ${clip.color}"></span>`;
+        }
+
+        el.innerHTML = `
+          ${previewHtml}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/10 text-slate-300">${clip.label}</span>
+              <div class="flex items-center gap-1.5">
+                ${clip.pinned ? '<span class="text-amber-400 text-xs">★</span>' : ''}
+                <span class="text-[10px] font-mono text-slate-500 group-hover:text-blue-300">⌘${index + 1}</span>
+              </div>
+            </div>
+            <p class="text-xs text-slate-200 font-mono truncate">${clip.text}</p>
+          </div>
+        `;
+
+        el.onclick = () => {
+          const toast = document.getElementById('demo-toast');
+          toast.textContent = `✓ Copied: "${clip.text.slice(0, 24)}..." (⌘V simulated)`;
+          toast.classList.remove('hidden');
+          setTimeout(() => toast.classList.add('hidden'), 2200);
+        };
+
+        container.appendChild(el);
+      });
+    }
+
+    renderClips();
+
+    // Search event
+    document.getElementById('demo-search').addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderClips();
+    });
+
+    // Filter Buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          b.classList.remove('bg-blue-600', 'text-white');
+          b.classList.add('bg-white/5', 'text-slate-400');
+        });
+        btn.classList.add('bg-blue-600', 'text-white');
+        btn.classList.remove('bg-white/5', 'text-slate-400');
+        currentFilter = btn.dataset.filter;
+        renderClips();
+      });
+    });
+
+    // Copy Gatekeeper Command
+    function copyCommand() {
+      const text = document.getElementById('cmd-text').textContent;
+      navigator.clipboard.writeText(text);
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('bg-emerald-600', 'text-white');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('bg-emerald-600', 'text-white');
+      }, 2000);
+    }
+  </script>
+</body>
+</html>
+
