@@ -1,3 +1,4 @@
+<img width="587" height="593" alt="image" src="https://github.com/user-attachments/assets/b42181bb-11c3-4d41-805f-d55e6e537c24" />
 # Cliptray: Cross-Platform Menu Bar Clipboard Manager
 
 Cliptray is a lightweight, high-performance clipboard manager designed with pixel-perfect adherence to **Apple's Human Interface Guidelines (HIG)** on macOS, while operating natively and efficiently on **Windows** and **Linux**.
